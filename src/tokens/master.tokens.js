@@ -25,6 +25,7 @@ export const GLOBAL_TOKENS = {
   ENGINE_GUITAR: "guitar",
   ENGINE_SYNTH: "synth",
   ENGINE_ORGAN: "organ",
+  ENGINE_WIND: "wind",
 
   // Prefixos de Ações (Eventos)
   ACTION_TONIC: "tonic",
@@ -65,6 +66,7 @@ export const GLOBAL_TOKENS = {
 };
 
 export const PERFORMANCE_EFFECTS = [
+  { action: "effectBendDown", label: "BEND −", copy: "DESCE 2 SEMITONS" },
   { action: "rhythmDown", label: "PEDAL", copy: "ALONGA APÓS SOLTAR" },
   { action: "effect", label: "BEND +", copy: "ESTICA +2 SEMITONS" },
 ];
@@ -159,6 +161,36 @@ export const MUSIC_TOKENS = {
       brightness: 4500,
       room: 0.3,
     },
+    windFlute: {
+      id: "windFlute",
+      label: "SOPRO · FLAUTA",
+      engine: GLOBAL_TOKENS.ENGINE_WIND,
+      duration: 7.5,
+      brightness: 3600,
+      windType: "flute",
+      resonance: 1.4,
+      room: 0.34,
+    },
+    windTrumpet: {
+      id: "windTrumpet",
+      label: "SOPRO · TROMPETE",
+      engine: GLOBAL_TOKENS.ENGINE_WIND,
+      duration: 5.5,
+      brightness: 5200,
+      windType: "trumpet",
+      resonance: 2.8,
+      room: 0.28,
+    },
+    windSax: {
+      id: "windSax",
+      label: "SOPRO · SAXOFONE",
+      engine: GLOBAL_TOKENS.ENGINE_WIND,
+      duration: 6.2,
+      brightness: 2400,
+      windType: "sax",
+      resonance: 3.6,
+      room: 0.3,
+    },
   }
 };
 
@@ -180,6 +212,7 @@ export const DEFAULT_BINDINGS = {
   [GLOBAL_TOKENS.ACTION_OCTAVE_DOWN]: KEYBOARD_TOKENS.KEY_Z, [GLOBAL_TOKENS.ACTION_OCTAVE_UP]: KEYBOARD_TOKENS.KEY_X,
   [GLOBAL_TOKENS.ACTION_RHYTHM_DOWN]: KEYBOARD_TOKENS.SPACE, [GLOBAL_TOKENS.ACTION_RHYTHM_UP]: null, 
   [GLOBAL_TOKENS.ACTION_EFFECT]: KEYBOARD_TOKENS.SEMICOLON,
+  effectBendDown: KEYBOARD_TOKENS.SLASH,
   
   [GLOBAL_TOKENS.ACTION_MEMORY + "0"]: KEYBOARD_TOKENS.KEY_A, [GLOBAL_TOKENS.ACTION_MEMORY + "1"]: KEYBOARD_TOKENS.KEY_S, 
   [GLOBAL_TOKENS.ACTION_MEMORY + "2"]: KEYBOARD_TOKENS.KEY_D, [GLOBAL_TOKENS.ACTION_MEMORY + "3"]: KEYBOARD_TOKENS.KEY_F,

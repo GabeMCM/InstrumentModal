@@ -24,8 +24,6 @@ export const features = {
         ? renderer.memoryName([...store.state.degrees])
         : STATE_MESSAGE_TOKENS.TONIC_LABEL;
     const noteName = renderer.currentNoteName();
-    const performanceEffect = PERFORMANCE_EFFECTS.find(effect => effect.action === action);
-    if (performanceEffect) return performanceEffect.label;
     return {
       tonic: store.state.tonic,
       noteName,
@@ -347,14 +345,14 @@ export const features = {
         </div>
         <div class="mapping-group-grid">
           ${group.actions.map(action => `
-            <button class="mapping-item ${store.state.remapping === action ? "listening" : ""}" data-map="${action}" type="button" ${store.state.smartMode ? "disabled" : ""}>
+            <button class="mapping-item ${store.state.remapping === action ? "listening" : ""}" data-map="${action}" type="button">
               <span>
                 <span class="mapping-function">${this.actionLabel(action)}</span>
                 <span class="mapping-item-context">${group.context}</span>
               </span>
               <span class="mapping-item-key">
                 <span class="keycap">${renderer.keyLabel(store.state.bindings[action])}</span>
-                <span class="mapping-change">${store.state.smartMode ? "CAMPO FIXO" : "ALTERAR"}</span>
+                <span class="mapping-change">ALTERAR</span>
               </span>
             </button>
           `).join("")}
@@ -379,6 +377,7 @@ export const features = {
       rhythmDown: "Pedal sustain",
       rhythmUp: "Livre",
       effect: "Bend +2",
+      effectBendDown: "Bend −2",
     }[action];
   },
 
@@ -393,7 +392,7 @@ export const features = {
   },
 
   beginShortcutCapture(action) {
-    if (store.state.smartMode) {
+    if (false && store.state.smartMode) {
       elements.soundState.textContent = "NO MODO CAMPO, O TECLADO É FIXO";
       return;
     }

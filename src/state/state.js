@@ -18,6 +18,9 @@ function loadBindings() {
     if (semicolonOwner) migrated[semicolonOwner] = null;
     migrated.effect = KEYBOARD_TOKENS.SEMICOLON;
   }
+  if (!migrated.effectBendDown || migrated.effectBendDown === migrated.memory10) {
+    migrated.effectBendDown = KEYBOARD_TOKENS.SLASH;
+  }
   const bindings = Object.fromEntries(Object.keys(DEFAULT_BINDINGS).map(action => [
     action,
     Object.prototype.hasOwnProperty.call(migrated, action) ? migrated[action] : DEFAULT_BINDINGS[action],

@@ -173,7 +173,7 @@ export const events = {
     if (action.startsWith(pref.SMART_TONIC)) {
       const position = Number(action.slice(pref.SMART_TONIC.length));
       store.dispatch(STATE_ACTION_TOKENS.SET_ACTIVE_PERFORMANCE_SLOT, null);
-      if (!store.state.pedalActive) audioEngine.dampVoices(0.15);
+      audioEngine.dampVoices(store.state.pedalActive ? 0.7 : 0.09);
       
       store.state.smartPosition = position;
       const scaleNote = renderer.smartScale()[position];
@@ -187,7 +187,7 @@ export const events = {
     } else if (action.startsWith(pref.TONIC)) {
       const tonicIndex = Number(action.slice(pref.TONIC.length));
       store.dispatch(STATE_ACTION_TOKENS.SET_ACTIVE_PERFORMANCE_SLOT, null);
-      if (!store.state.pedalActive) audioEngine.dampVoices(0.15);
+      audioEngine.dampVoices(store.state.pedalActive ? 0.7 : 0.09);
       store.dispatch(STATE_ACTION_TOKENS.SET_TONIC, tonicIndex);
       this.recallLinkedMemory(tonicIndex);
       audioEngine.strum(GLOBAL_TOKENS.ACTION_RHYTHM_DOWN); // Play immediately
@@ -199,7 +199,7 @@ export const events = {
         if (store.state.degrees.size >= GLOBAL_TOKENS.MAX_DEGREES) return;
         store.dispatch(STATE_ACTION_TOKENS.ADD_DEGREE, index);
       }
-      if (!store.state.pedalActive) audioEngine.dampVoices(0.15);
+      audioEngine.dampVoices(store.state.pedalActive ? 0.7 : 0.09);
       audioEngine.strum(GLOBAL_TOKENS.ACTION_RHYTHM_DOWN); // Play immediately after changing degree
     } else if (action === pref.OCTAVE_DOWN) {
       store.dispatch(STATE_ACTION_TOKENS.SET_OCTAVE, Math.max(1, store.state.octave - 1));
@@ -209,7 +209,7 @@ export const events = {
       if (store.state.tonic !== null) audioEngine.strum(GLOBAL_TOKENS.ACTION_RHYTHM_DOWN);
     } else if (action === pref.RHYTHM_DOWN) {
       store.dispatch(STATE_ACTION_TOKENS.TOGGLE_PEDAL);
-      if (!store.state.pedalActive) audioEngine.dampVoices(0.15);
+      audioEngine.dampVoices(store.state.pedalActive ? 0.7 : 0.09);
     } else if (action === pref.RHYTHM_UP) {
       return;
     } else if (action.startsWith(pref.MEMORY)) {
@@ -237,9 +237,7 @@ export const events = {
       || action.startsWith(pref.MEMORY)
       || action.startsWith(pref.PERFORMANCE)
     ) {
-      if (!store.state.pedalActive) {
-        audioEngine.dampVoices(0.2);
-      }
+      audioEngine.dampVoices(store.state.pedalActive ? 1.8 : 0.2);
     } else if (action.startsWith(pref.EFFECT)) {
       audioEngine.applyPerformanceEffect(action, false);
     }
@@ -300,7 +298,10 @@ export const events = {
 
   bindUIControls() {
     elements.soundSetSelect.addEventListener(DOM_EVENTS_TOKENS.CHANGE, () => {
+      audioEngine.stopAll();
+      this.featureHandlers?.stopBase?.();
       store.dispatch(STATE_ACTION_TOKENS.SET_SOUND_SET, elements.soundSetSelect.value);
+      audioEngine.init();
       renderer.updateUI();
     });
 

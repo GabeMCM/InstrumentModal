@@ -18,12 +18,42 @@
 }
 
 @media (max-width: 620px) {
-  .app-shell { padding: 0 12px; }
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    padding: 0;
+    touch-action: manipulation;
+  }
+
+  .app-shell {
+    width: 100%;
+    height: 100dvh;
+    padding: 0 10px;
+    overflow: hidden;
+  }
+
   .topbar { height: 62px; }
   .text-button, .status-pill, .sound-set-control > span { display: none; }
-  .hero { padding: 34px 0 28px; }
+  .hero,
+  footer { display: none; }
   h1 { font-size: clamp(42px, 15vw, 64px); }
-  .instrument { padding: 16px; }
+  .instrument {
+    position: fixed;
+    inset: 62px 0 68px;
+    height: auto;
+    padding: 10px;
+    overflow: hidden;
+    border-radius: 0;
+  }
+
+  .instrument[hidden] { display: none !important; }
+
   .section-heading { flex-wrap: wrap; }
   .smart-controls { width: 100%; margin: 8px 0 0; }
   .octave-controls { width: 100%; margin: 8px 0 0; justify-content: space-between; }
@@ -56,6 +86,207 @@
   .guide-cards,
   .guide-shortcuts { grid-template-columns: 1fr; }
   .guide-content { max-height: calc(100vh - 220px); }
+
+  /* Compositor móvel: duas superfícies deslizáveis e performance sempre visível. */
+  #composerWorkspace {
+    display: grid;
+    grid-template-rows: auto minmax(92px, 0.85fr) auto minmax(150px, 1.45fr) auto;
+    gap: 7px;
+  }
+
+  #composerWorkspace > .section-heading:first-child {
+    min-height: 36px;
+    margin: 0;
+    flex-wrap: nowrap;
+  }
+
+  #composerWorkspace > .section-heading:first-child .section-number,
+  #composerWorkspace > .section-heading:first-child > div:nth-child(2),
+  #composerWorkspace > .divider,
+  #composerWorkspace > .tonic-links,
+  #composerWorkspace > .memory-grid,
+  #composerWorkspace > .section-heading.compact:nth-of-type(2) {
+    display: none;
+  }
+
+  #composerWorkspace > .section-heading.compact {
+    min-height: 28px;
+    margin: 0;
+    flex-wrap: nowrap;
+  }
+
+  #composerWorkspace > .section-heading.compact h2 {
+    font-size: 13px;
+  }
+
+  #composerWorkspace > .section-heading.compact p,
+  #composerWorkspace > .section-heading.compact .section-number {
+    display: none;
+  }
+
+  .tonic-grid,
+  .degree-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tonic-grid::-webkit-scrollbar,
+  .degree-grid::-webkit-scrollbar,
+  .performance-memory-grid::-webkit-scrollbar,
+  .base-memory-grid::-webkit-scrollbar { display: none; }
+
+  .tonic-grid {
+    grid-auto-columns: calc((100vw - 41px) / 4);
+  }
+
+  .degree-grid {
+    grid-auto-columns: calc((100vw - 42px) / 3.25);
+    align-items: stretch;
+  }
+
+  .tonic-cell,
+  .degree-family {
+    scroll-snap-align: start;
+  }
+
+  .tonic-grid .note-key,
+  .smart-tonic-grid .tonic-key {
+    width: 100%;
+    height: 100%;
+    min-height: 84px;
+    border-radius: 13px;
+  }
+
+  .degree-family {
+    height: 100%;
+    grid-template-rows: 1.08fr 0.92fr;
+  }
+
+  .degree-key,
+  .degree-key.altered {
+    height: 100%;
+    min-height: 0;
+    border-radius: 12px;
+  }
+
+  .degree-key .note-name { font-size: 23px; }
+  .degree-key.altered .note-name { font-size: 15px; }
+
+  .smart-controls {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .smart-mode-switch {
+    min-width: 124px;
+  }
+
+  .field-controls {
+    position: fixed;
+    z-index: 90;
+    top: 65px;
+    left: 10px;
+    right: 10px;
+    padding: 5px;
+    overflow-x: auto;
+    background: var(--coal);
+  }
+
+  .octave-controls {
+    width: auto;
+    margin: 0 0 0 auto;
+  }
+
+  .control-key {
+    width: 39px;
+    height: 35px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 0;
+  }
+
+  .control-key::after {
+    color: var(--gold);
+    font-size: 20px;
+  }
+
+  [data-action="octaveDown"]::after { content: "−"; }
+  [data-action="octaveUp"]::after { content: "+"; }
+
+  .octave-readout strong { font-size: 18px; }
+
+  #composerWorkspace .performance-row {
+    position: static;
+    align-self: end;
+    margin: 0;
+  }
+
+  /* Palco móvel: notas e bases viram bancos horizontais, sem rolagem da página. */
+  #performanceWorkspace {
+    display: grid;
+    grid-template-rows: auto minmax(125px, 1fr) auto minmax(82px, 0.68fr) auto;
+    gap: 8px;
+  }
+
+  #performanceWorkspace .performance-stage-header {
+    min-height: 38px;
+    margin: 0;
+  }
+
+  #performanceWorkspace .performance-stage-header > div:first-child,
+  #performanceWorkspace .stage-instructions,
+  #performanceWorkspace .set-manager {
+    display: none;
+  }
+
+  .stage-current {
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 12px;
+  }
+
+  .performance-memory-grid,
+  .base-memory-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .performance-memory-grid {
+    grid-auto-columns: calc((100vw - 35px) / 2.45);
+  }
+
+  .base-memory-grid {
+    grid-auto-columns: calc((100vw - 42px) / 3.2);
+  }
+
+  .performance-memory-slot,
+  .base-memory-slot {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    scroll-snap-align: start;
+    border-radius: 14px;
+  }
+
+  #performanceWorkspace .stage-performance {
+    position: static;
+    align-self: end;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

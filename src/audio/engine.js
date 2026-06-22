@@ -10,6 +10,7 @@ let reverbGain = null;
 let bodyFilter = null;
 let stringBuffers = new Map();
 let effectTimers = new Map();
+const MAX_ACTIVE_VOICES = 36;
 
 // Active voices tracking
 let voices = [];
@@ -76,13 +77,22 @@ function createPluckBuffer(frequency, preset) {
 
 export const audioEngine = {
   init() {
-    if (audioCtx) return;
+    if (audioCtx) {
+      if (audioCtx.state === WEB_AUDIO_TOKENS.STATE_SUSPENDED) audioCtx.resume().catch(() => {});
+      return;
+    }
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     audioCtx = new AudioContextClass();
     
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.8;
-    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.62;
+    const compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -18;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.22;
+    masterGain.connect(compressor).connect(audioCtx.destination);
     
     bodyFilter = createBodyFilter();
     bodyFilter.output.connect(masterGain);
@@ -105,6 +115,13 @@ export const audioEngine = {
     return masterGain;
   },
 
+  stopAll(release = 0.06) {
+    if (!audioCtx) return;
+    [...voices].forEach(voice => this.stopVoice(voice, release));
+    effectTimers.forEach(timer => window.clearInterval(timer));
+    effectTimers.clear();
+  },
+
   midiToFrequency(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
   },
@@ -112,8 +129,11 @@ export const audioEngine = {
   dampVoices(release = 0.14) {
     if (!audioCtx || !voices.length) return;
     const now = audioCtx.currentTime;
-    const musicalRelease = Math.max(0.9, release);
-    voices.forEach(({ gain, source }) => {
+    const musicalRelease = Math.max(0.04, release);
+    [...voices].forEach(voice => {
+      const { gain, source } = voice;
+      if (voice.stopping) return;
+      voice.stopping = true;
       if (typeof gain.gain.cancelAndHoldAtTime === JAVASCRIPT_TOKENS.TYPE_FUNCTION) {
         gain.gain.cancelAndHoldAtTime(now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + musicalRelease);
@@ -121,13 +141,18 @@ export const audioEngine = {
         gain.gain.cancelScheduledValues(now);
         gain.gain.setTargetAtTime(0.001, now, musicalRelease / 4);
       }
-      if (source && source.stop && !source.isOsc) source.stop(now + musicalRelease + 0.2);
+      if (source && source.stop && !source.isOsc) {
+        try { source.stop(now + musicalRelease + 0.05); } catch (_) {}
+      }
       if (source && source.isOsc) {
         source.oscillators.forEach(o => {
           const osc = o.osc || o;
           try { osc.stop(now + musicalRelease + 0.2); } catch(e){}
         });
       }
+      window.setTimeout(() => {
+        voices = voices.filter(item => item !== voice);
+      }, (musicalRelease + 0.1) * 1000);
     });
   },
 
@@ -144,6 +169,22 @@ export const audioEngine = {
         gain.gain.setTargetAtTime(0.001, now, release / 4);
       }
     });
+  },
+
+  stopVoice(voice, release = 0.08) {
+    if (!audioCtx || !voice || voice.stopping) return;
+    voice.stopping = true;
+    const now = audioCtx.currentTime;
+    voice.gain?.gain.cancelScheduledValues(now);
+    voice.gain?.gain.setTargetAtTime(0.001, now, Math.max(0.01, release / 4));
+    if (voice.source?.isOsc) {
+      voice.source.oscillators.forEach(item => {
+        try { (item.osc || item).stop(now + release + 0.06); } catch (_) {}
+      });
+    } else {
+      try { voice.source?.stop?.(now + release + 0.06); } catch (_) {}
+    }
+    voices = voices.filter(item => item !== voice);
   },
 
   applyBend(active) {
@@ -257,22 +298,29 @@ export const audioEngine = {
       source.buffer = stringBuffers.get(midi);
       source.playbackRate.value = 1;
       mainOutput = source;
-    } else if (preset.engine === GLOBAL_TOKENS.ENGINE_SYNTH || preset.engine === GLOBAL_TOKENS.ENGINE_ORGAN) {
+      source.start(startAt);
+    } else if (
+      preset.engine === GLOBAL_TOKENS.ENGINE_SYNTH
+      || preset.engine === GLOBAL_TOKENS.ENGINE_ORGAN
+      || preset.engine === GLOBAL_TOKENS.ENGINE_WIND
+    ) {
       const isOrgan = preset.engine === GLOBAL_TOKENS.ENGINE_ORGAN;
+      const isWind = preset.engine === GLOBAL_TOKENS.ENGINE_WIND;
+      const windType = preset.windType || "flute";
       const osc1 = audioCtx.createOscillator();
       const osc2 = audioCtx.createOscillator();
       const sub = audioCtx.createOscillator();
       
-      osc1.type = isOrgan ? WEB_AUDIO_TOKENS.OSC_SINE : WEB_AUDIO_TOKENS.OSC_SAWTOOTH;
-      osc2.type = isOrgan ? WEB_AUDIO_TOKENS.OSC_TRIANGLE : WEB_AUDIO_TOKENS.OSC_SQUARE;
+      osc1.type = isOrgan ? WEB_AUDIO_TOKENS.OSC_SINE : isWind && windType === "flute" ? WEB_AUDIO_TOKENS.OSC_SINE : WEB_AUDIO_TOKENS.OSC_SAWTOOTH;
+      osc2.type = isOrgan ? WEB_AUDIO_TOKENS.OSC_TRIANGLE : isWind && windType === "sax" ? WEB_AUDIO_TOKENS.OSC_SQUARE : WEB_AUDIO_TOKENS.OSC_SINE;
       sub.type = WEB_AUDIO_TOKENS.OSC_SINE;
       
       osc1.frequency.value = frequency;
-      osc2.frequency.value = frequency * (isOrgan ? 2 : 1.002);
-      sub.frequency.value = frequency * 0.5;
+      osc2.frequency.value = frequency * (isOrgan ? 2 : isWind ? 2.002 : 1.002);
+      sub.frequency.value = frequency * (isWind ? 1.005 : 0.5);
       
       const merger = audioCtx.createGain();
-      merger.gain.value = isOrgan ? 0.6 : 0.4;
+      merger.gain.value = isOrgan ? 0.3 : isWind ? (windType === "trumpet" ? 0.16 : 0.2) : 0.4;
       osc1.connect(merger);
       osc2.connect(merger);
       sub.connect(merger);
@@ -282,8 +330,14 @@ export const audioEngine = {
         oscillators: [osc1, osc2, sub],
         playbackRate: {
           cancelScheduledValues: (t) => [osc1, osc2, sub].forEach(o => o.frequency.cancelScheduledValues(t)),
-          setValueAtTime: (v, t) => [osc1, osc2, sub].forEach((o, i) => o.frequency.setValueAtTime(frequency * v * (i === 1 && isOrgan ? 2 : i===1 ? 1.002 : i===2 ? 0.5 : 1), t)),
-          exponentialRampToValueAtTime: (v, t) => [osc1, osc2, sub].forEach((o, i) => o.frequency.exponentialRampToValueAtTime(frequency * v * (i === 1 && isOrgan ? 2 : i===1 ? 1.002 : i===2 ? 0.5 : 1), t))
+          setValueAtTime: (v, t) => [osc1, osc2, sub].forEach((o, i) => o.frequency.setValueAtTime(
+            frequency * v * (i === 1 && isOrgan ? 2 : i === 1 && isWind ? 2.002 : i === 1 ? 1.002 : i === 2 && isWind ? 1.005 : i === 2 ? 0.5 : 1),
+            t
+          )),
+          exponentialRampToValueAtTime: (v, t) => [osc1, osc2, sub].forEach((o, i) => o.frequency.exponentialRampToValueAtTime(
+            frequency * v * (i === 1 && isOrgan ? 2 : i === 1 && isWind ? 2.002 : i === 1 ? 1.002 : i === 2 && isWind ? 1.005 : i === 2 ? 0.5 : 1),
+            t
+          ))
         }
       };
       osc1.start(startAt);
@@ -328,26 +382,34 @@ export const audioEngine = {
     const filter = audioCtx.createBiquadFilter();
     filter.type = WEB_AUDIO_TOKENS.FILTER_LOWPASS;
     filter.frequency.value = muted ? preset.brightness * 0.3 : preset.brightness;
+    filter.Q.value = preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? (preset.resonance || 2.2) : 0.7;
     if (preset.engine === GLOBAL_TOKENS.ENGINE_SYNTH) {
       filter.frequency.setValueAtTime(preset.brightness * 2, startAt);
       filter.frequency.exponentialRampToValueAtTime(preset.brightness * 0.2, startAt + 1.5);
     }
     
     const gain = audioCtx.createGain();
-    const level = velocity * (preset.engine === GLOBAL_TOKENS.ENGINE_PIANO ? (preset.hammer || 0.16) : 1);
+    const polyphonyScale = 1 / Math.sqrt(Math.max(1, total));
+    const engineLevel = preset.engine === GLOBAL_TOKENS.ENGINE_PIANO
+      ? (preset.hammer || 0.16)
+      : preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? 0.18 : 0.28;
+    const level = Math.min(0.22, velocity * engineLevel * polyphonyScale);
     
     if (muted) {
       gain.gain.setValueAtTime(level, startAt);
       gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.15);
     } else {
       gain.gain.setValueAtTime(0.001, startAt);
-      gain.gain.linearRampToValueAtTime(level, startAt + 0.015);
+      gain.gain.linearRampToValueAtTime(level, startAt + (preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? 0.09 : 0.015));
       
       if (preset.duration === Infinity) {
         // Organ / pad that holds forever until damped
         gain.gain.setTargetAtTime(level * 0.8, startAt + 0.1, 0.5);
       } else {
-        gain.gain.exponentialRampToValueAtTime(Math.max(0.001, level * 0.58), startAt + 0.34);
+        gain.gain.exponentialRampToValueAtTime(
+          Math.max(0.001, level * (preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? 0.86 : 0.58)),
+          startAt + 0.34
+        );
         gain.gain.exponentialRampToValueAtTime(Math.max(0.001, level * 0.2), startAt + 3.2);
         gain.gain.exponentialRampToValueAtTime(0.001, startAt + preset.duration);
       }
@@ -364,6 +426,7 @@ export const audioEngine = {
     
     const voice = { source, gain, filter, pan, midi, startedAt: startAt, bendRatio: 1, baseLevel: level, basePan: pan.pan.value };
     voices.push(voice);
+    while (voices.length > MAX_ACTIVE_VOICES) this.stopVoice(voices[0], 0.04);
     
     if (mainOutput.onended !== undefined && !source.isOsc) {
       mainOutput.onended = () => {
@@ -371,9 +434,8 @@ export const audioEngine = {
       };
     } else {
       // Cleanup osc manually
-      setTimeout(() => {
-        voices = voices.filter(item => item !== voice);
-      }, (preset.duration !== Infinity ? preset.duration : 10) * 1000);
+      const lifetime = preset.duration !== Infinity ? preset.duration + 0.5 : 30;
+      window.setTimeout(() => this.stopVoice(voice, 0.12), lifetime * 1000);
     }
     
     return voice;
