@@ -78,6 +78,52 @@
         </button>
       </nav>
 
+      <section class="mobile-instrument" id="mobileInstrument" aria-label="Instrumento móvel">
+        <header class="mobile-instrument-head">
+          <div>
+            <span id="mobileModeLabel">COMPOSITOR</span>
+            <strong id="mobileHarmonyLabel">ESCOLHA UMA NOTA</strong>
+          </div>
+          <label class="mobile-sound">
+            <span>TIMBRE</span>
+            <select id="mobileSoundSet" aria-label="Timbre móvel"></select>
+          </label>
+        </header>
+
+        <div class="mobile-wheel-zone" id="mobileWheelZone">
+          <div class="mobile-wheel" id="mobileWheel"></div>
+          <button class="mobile-wheel-center" id="mobileWheelCenter" type="button">
+            <span id="mobileCenterOverline">TÔNICA</span>
+            <strong id="mobileCenterNote">—</strong>
+            <small id="mobileCenterShape">TOQUE OU DESLIZE</small>
+          </button>
+        </div>
+
+        <div class="mobile-context-tabs" id="mobileContextTabs">
+          <button class="active" data-mobile-panel="degrees" type="button">GRAUS</button>
+          <button data-mobile-panel="memories" type="button">MEMÓRIAS</button>
+          <button data-mobile-panel="bases" type="button">BASES</button>
+        </div>
+        <div class="mobile-context-strip" id="mobileContextStrip"></div>
+
+        <div class="mobile-expression">
+          <button class="mobile-expression-key bend-down" data-action="effectBendDown" type="button">
+            <span>↙</span><strong>BEND −</strong>
+          </button>
+          <button class="mobile-expression-key pedal" data-action="rhythmDown" type="button">
+            <span>◉</span><strong>PEDAL</strong>
+          </button>
+          <button class="mobile-expression-key bend-up" data-action="effect" type="button">
+            <span>↗</span><strong>BEND +</strong>
+          </button>
+        </div>
+
+        <nav class="mobile-mode-nav">
+          <button class="active" data-workspace="composer" type="button"><span>◌</span>COMPOR</button>
+          <button data-workspace="performance" type="button"><span>◉</span>TOCAR</button>
+        </nav>
+      </section>
+
       <section class="instrument" id="composerWorkspace" aria-label="Controles do compositor">
         <div class="section-heading">
           <span class="section-number">01</span>
