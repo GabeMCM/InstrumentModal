@@ -335,7 +335,8 @@ export const renderer = {
       element.classList.toggle("latched", action === "rhythmDown" && store.state.pedalActive);
       if (action === "rhythmDown") {
         element.setAttribute("aria-pressed", String(store.state.pedalActive));
-        element.querySelector(".performance-copy").textContent = store.state.pedalActive ? "ATIVO · SOLTE PARA LIBERAR" : "DESATIVADO · ALONGA O FIM";
+        const copy = element.querySelector(".performance-copy");
+        if (copy) copy.textContent = store.state.pedalActive ? "ATIVO · SOLTE PARA LIBERAR" : "DESATIVADO · ALONGA O FIM";
       }
     });
 
@@ -344,13 +345,14 @@ export const renderer = {
     elements.memoryCount.textContent = store.state.memories.filter(Boolean).length;
     elements.soundSetSelect.value = store.state.soundSet;
     
-    const rDownBtn = document.querySelector('[data-action="rhythmDown"]');
+    const rDownBtn = elements.performanceEffectsGrid?.querySelector('[data-action="rhythmDown"]');
     if (rDownBtn) {
       rDownBtn.classList.toggle("latched", store.state.pedalActive);
       // Wait, space is now just a pedal! We will toggle its visual state using "latched" class or "active"
       rDownBtn.classList.toggle("active", store.state.pedalActive);
       rDownBtn.setAttribute("aria-pressed", String(store.state.pedalActive));
-      rDownBtn.querySelector(".performance-copy").textContent = store.state.pedalActive ? "ATIVO · SOLTE PARA LIBERAR" : "DESATIVADO · ALONGA O FIM";
+      const copy = rDownBtn.querySelector(".performance-copy");
+      if (copy) copy.textContent = store.state.pedalActive ? "ATIVO · SOLTE PARA LIBERAR" : "DESATIVADO · ALONGA O FIM";
     }
     
     elements.smartModeToggle.checked = store.state.smartMode;
