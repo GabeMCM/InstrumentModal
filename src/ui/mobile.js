@@ -259,8 +259,7 @@ function handleWheelMove(event) {
 
 function init() {
   if (!root) return;
-  soundSelect.innerHTML = Object.values(MUSIC_TOKENS.SOUND_SETS)
-    .map(set => `<option value="${set.id}">${set.label}</option>`).join('');
+  soundSelect.innerHTML = renderer.soundSetOptionsHTML();
   soundSelect.addEventListener('change', () => {
     document.querySelector('#soundSet').value = soundSelect.value;
     document.querySelector('#soundSet').dispatchEvent(new Event('change'));

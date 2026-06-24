@@ -12,6 +12,7 @@ import { UI_SELECTORS } from './ui/elements.tokens.js';
 function bootstrap() {
   // Inicialização de UI
   renderer.applyTheme(store.state.theme);
+  renderer.renderSoundSetOptions();
   renderer.renderPerformanceEffects();
   renderer.renderKeys();
   if (store.state.smartMode) {

@@ -72,6 +72,64 @@ export const PERFORMANCE_EFFECTS = [
   { action: "effect", label: "BEND +", copy: "ESTICA +2 SEMITONS" },
 ];
 
+const GM_GROUPS = [
+  ["gmPiano", "PIANOS", ["Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Piano", "Honky-tonk Piano", "Electric Piano 1", "Electric Piano 2", "Harpsichord", "Clavinet"]],
+  ["gmChromatic", "PERCUSSAO MELODICA", ["Celesta", "Glockenspiel", "Music Box", "Vibraphone", "Marimba", "Xylophone", "Tubular Bells", "Dulcimer"]],
+  ["gmOrgan", "ORGAOS", ["Drawbar Organ", "Percussive Organ", "Rock Organ", "Church Organ", "Reed Organ", "Accordion", "Harmonica", "Tango Accordion"]],
+  ["gmGuitar", "GUITARRAS", ["Acoustic Guitar Nylon", "Acoustic Guitar Steel", "Electric Guitar Jazz", "Electric Guitar Clean", "Electric Guitar Muted", "Overdriven Guitar", "Distortion Guitar", "Guitar Harmonics"]],
+  ["gmBass", "BAIXOS", ["Acoustic Bass", "Electric Bass Finger", "Electric Bass Pick", "Fretless Bass", "Slap Bass 1", "Slap Bass 2", "Synth Bass 1", "Synth Bass 2"]],
+  ["gmStrings", "CORDAS", ["Violin", "Viola", "Cello", "Contrabass", "Tremolo Strings", "Pizzicato Strings", "Orchestral Harp", "Timpani"]],
+  ["gmEnsemble", "ENSEMBLES", ["String Ensemble 1", "String Ensemble 2", "Synth Strings 1", "Synth Strings 2", "Choir Aahs", "Voice Oohs", "Synth Voice", "Orchestra Hit"]],
+  ["gmBrass", "METAIS", ["Trumpet", "Trombone", "Tuba", "Muted Trumpet", "French Horn", "Brass Section", "Synth Brass 1", "Synth Brass 2"]],
+  ["gmReed", "PALHETAS", ["Soprano Sax", "Alto Sax", "Tenor Sax", "Baritone Sax", "Oboe", "English Horn", "Bassoon", "Clarinet"]],
+  ["gmPipe", "SOPROS", ["Piccolo", "Flute", "Recorder", "Pan Flute", "Blown Bottle", "Shakuhachi", "Whistle", "Ocarina"]],
+  ["gmLead", "SYNTH LEADS", ["Lead 1 Square", "Lead 2 Sawtooth", "Lead 3 Calliope", "Lead 4 Chiff", "Lead 5 Charang", "Lead 6 Voice", "Lead 7 Fifths", "Lead 8 Bass + Lead"]],
+  ["gmPad", "SYNTH PADS", ["Pad 1 New Age", "Pad 2 Warm", "Pad 3 Polysynth", "Pad 4 Choir", "Pad 5 Bowed", "Pad 6 Metallic", "Pad 7 Halo", "Pad 8 Sweep"]],
+  ["gmFx", "SYNTH FX", ["FX 1 Rain", "FX 2 Soundtrack", "FX 3 Crystal", "FX 4 Atmosphere", "FX 5 Brightness", "FX 6 Goblins", "FX 7 Echoes", "FX 8 Sci-fi"]],
+  ["gmEthnic", "ETNICOS", ["Sitar", "Banjo", "Shamisen", "Koto", "Kalimba", "Bagpipe", "Fiddle", "Shanai"]],
+  ["gmPercussive", "PERCUSSIVOS", ["Tinkle Bell", "Agogo", "Steel Drums", "Woodblock", "Taiko Drum", "Melodic Tom", "Synth Drum", "Reverse Cymbal"]],
+  ["gmSoundFx", "EFEITOS", ["Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet", "Telephone Ring", "Helicopter", "Applause", "Gunshot"]],
+];
+
+const GM_GROUP_ENGINE = {
+  gmPiano: GLOBAL_TOKENS.ENGINE_PIANO,
+  gmOrgan: GLOBAL_TOKENS.ENGINE_ORGAN,
+  gmBrass: GLOBAL_TOKENS.ENGINE_WIND,
+  gmReed: GLOBAL_TOKENS.ENGINE_WIND,
+  gmPipe: GLOBAL_TOKENS.ENGINE_WIND,
+  gmLead: GLOBAL_TOKENS.ENGINE_SYNTH,
+  gmPad: GLOBAL_TOKENS.ENGINE_SYNTH,
+  gmFx: GLOBAL_TOKENS.ENGINE_SYNTH,
+};
+
+function gmDefaults(groupId) {
+  if (groupId === "gmOrgan") return { duration: Infinity, brightness: 4300, room: 0.3 };
+  if (groupId === "gmGuitar" || groupId === "gmBass") return { duration: 4.8, brightness: 3600, room: 0.24 };
+  if (groupId === "gmStrings" || groupId === "gmEnsemble") return { duration: 7.2, brightness: 3300, room: 0.42 };
+  if (groupId === "gmBrass" || groupId === "gmReed" || groupId === "gmPipe") return { duration: 5.4, brightness: 4600, room: 0.32 };
+  if (groupId === "gmLead") return { duration: 4.2, brightness: 7200, room: 0.32 };
+  if (groupId === "gmPad" || groupId === "gmFx") return { duration: 8.0, brightness: 2400, room: 0.5 };
+  if (groupId === "gmPercussive" || groupId === "gmChromatic") return { duration: 4.2, brightness: 5200, room: 0.28 };
+  return { duration: 5.2, brightness: 4200, room: 0.3 };
+}
+
+function createGMSoundSets() {
+  return Object.fromEntries(GM_GROUPS.flatMap(([groupId, group, names], groupIndex) =>
+    names.map((name, index) => {
+      const program = groupIndex * 8 + index;
+      const id = `gm${String(program).padStart(3, "0")}`;
+      return [id, {
+        id,
+        label: `${group} · ${name.toUpperCase()}`,
+        group,
+        program,
+        engine: GM_GROUP_ENGINE[groupId] || "gm",
+        ...gmDefaults(groupId),
+      }];
+    })
+  ));
+}
+
 export const MUSIC_TOKENS = {
   MODE_MAJOR: "major",
   MODE_MINOR: "minor",
@@ -172,6 +230,7 @@ export const MUSIC_TOKENS = {
       resonance: 3.2,
       room: 0.3,
     },
+    ...createGMSoundSets(),
   }
 };
 

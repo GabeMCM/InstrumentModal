@@ -12,6 +12,9 @@ let bodyFilter = null;
 let stringBuffers = new Map();
 let effectTimers = new Map();
 const MAX_ACTIVE_VOICES = 36;
+const MAX_CHORD_NOTES = 8;
+const MIN_MIDI = 24;
+const MAX_MIDI = 96;
 
 // Active voices tracking
 let voices = [];
@@ -277,13 +280,13 @@ export const audioEngine = {
   setPitchRatio(ratio, active) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
+    const target = active ? ratio : 1;
     voices.forEach(voice => {
       if (voice.tone) {
         toneSpessaEngine.bendVoice(voice, target, 0.12);
         return;
       }
       if (!voice.source?.playbackRate) return;
-      const target = active ? ratio : 1;
       const from = voice.bendRatio || 1;
       voice.source.playbackRate.cancelScheduledValues(now);
       voice.source.playbackRate.setValueAtTime(from, now);
@@ -349,6 +352,7 @@ export const audioEngine = {
     const preset = MUSIC_TOKENS.SOUND_SETS[store.state.soundSet] || MUSIC_TOKENS.SOUND_SETS.piano;
     const startAt = scheduledAt ?? audioCtx.currentTime;
     const frequency = this.midiToFrequency(midi);
+    const gmPreset = preset.id?.startsWith("gm");
 
     if (preset.engine !== GLOBAL_TOKENS.ENGINE_GUITAR && toneSpessaEngine.available) {
       const polyphonyScale = 1 / Math.sqrt(Math.max(1, total));
@@ -364,6 +368,8 @@ export const audioEngine = {
         return toneVoice;
       }
     }
+
+    if (gmPreset) return null;
     
     let source;
     let mainOutput;
@@ -481,8 +487,8 @@ export const audioEngine = {
       gain.gain.linearRampToValueAtTime(level, startAt + (preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? 0.09 : 0.015));
       
       if (preset.duration === Infinity) {
-        // Organ / pad that holds forever until damped
         gain.gain.setTargetAtTime(level * 0.8, startAt + 0.1, 0.5);
+        gain.gain.setTargetAtTime(0.001, startAt + 10, 1.8);
       } else {
         gain.gain.exponentialRampToValueAtTime(
           Math.max(0.001, level * (preset.engine === GLOBAL_TOKENS.ENGINE_WIND ? 0.86 : 0.58)),
@@ -539,7 +545,7 @@ export const audioEngine = {
       };
     } else {
       // Cleanup osc manually
-      const lifetime = preset.duration !== Infinity ? preset.duration + 0.5 : 30;
+      const lifetime = preset.duration !== Infinity ? preset.duration + 0.5 : 12;
       window.setTimeout(() => this.stopVoice(voice, 0.12), lifetime * 1000);
     }
     
@@ -573,8 +579,8 @@ export const audioEngine = {
       let m = (octave + 1) * 12 + pitch;
       if (m < rootMidi) m += 12;
       if (i > 0 && pitch === resolvedTonic) m += 12;
-      return m;
-    });
+      return Math.max(MIN_MIDI, Math.min(MAX_MIDI, m));
+    }).slice(0, MAX_CHORD_NOTES);
     
     notes = notes.sort((a, b) => direction === ENGINE_TOKENS.STRUM_DOWN ? a - b : b - a);
     const now = scheduledAt ?? audioCtx.currentTime + 0.012;

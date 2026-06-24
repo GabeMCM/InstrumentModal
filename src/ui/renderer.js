@@ -31,6 +31,35 @@ export const renderer = {
     return compact.length > 7 ? `${compact.slice(0, 6)}…` : compact;
   },
 
+  escapeOptionText(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  },
+
+  soundSetOptionsHTML() {
+    const groups = new Map();
+    Object.values(MUSIC_TOKENS.SOUND_SETS).forEach(set => {
+      const group = set.group || "FORMINC";
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(set);
+    });
+
+    return [...groups.entries()].map(([group, sets]) => `
+      <optgroup label="${this.escapeOptionText(group)}">
+        ${sets.map(set => `<option value="${set.id}">${this.escapeOptionText(set.label)}</option>`).join("")}
+      </optgroup>
+    `).join("");
+  },
+
+  renderSoundSetOptions() {
+    if (!elements.soundSetSelect) return;
+    elements.soundSetSelect.innerHTML = this.soundSetOptionsHTML();
+    elements.soundSetSelect.value = store.state.soundSet;
+  },
+
   smartScale() {
     const mode = store.state.fieldMinor ? MUSIC_TOKENS.MODE_MINOR : MUSIC_TOKENS.MODE_MAJOR;
     const rootPitch = (MUSIC_TOKENS.NATURAL_PITCHES[store.state.fieldLetter] + store.state.fieldAccidental + 12) % 12;

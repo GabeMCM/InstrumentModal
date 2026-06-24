@@ -1,4 +1,5 @@
-import * as Tone from '../../node_modules/tone/build/esm/index.js';
+import * as Tone from 'tone';
+import { WorkletSynthesizer } from 'spessasynth_lib';
 import { GLOBAL_TOKENS } from '../tokens/master.tokens.js';
 
 const PROGRAMS = {
@@ -31,9 +32,14 @@ let sampledPianoLoading = false;
 let spessaReady = false;
 let spessaSynth = null;
 let spessaLoading = null;
-let spessaProgram = null;
+const spessaPrograms = new Map();
 const spessaTimers = new Map();
 const MIN_SCHEDULE_AHEAD = 0.025;
+const SPESSA_WORKLET_URL = '/vendor/spessasynth_processor.min.js';
+const SOUNDFONT_URLS = ['/soundfonts/forminic.sf3', '/soundfonts/forminic.sf2'];
+const MIDI_CC_BANK_MSB = 0;
+const MIDI_CC_BANK_LSB = 32;
+const PERCUSSION_PROGRAMS = new Set([112, 113, 114, 115, 116, 117, 118, 119]);
 const PIANO_SAMPLE_URLS = {
   A0: 'A0.mp3', C1: 'C1.mp3', 'D#1': 'Ds1.mp3', 'F#1': 'Fs1.mp3',
   A1: 'A1.mp3', C2: 'C2.mp3', 'D#2': 'Ds2.mp3', 'F#2': 'Fs2.mp3',
@@ -120,20 +126,49 @@ function initSampledPiano() {
   sampledPiano.connect(reverb);
 }
 
+function spessaChannelFor(program) {
+  if (PERCUSSION_PROGRAMS.has(program)) return 9;
+  if (program >= 24 && program <= 39) return 1;
+  if (program >= 40 && program <= 55) return 2;
+  if (program >= 56 && program <= 79) return 3;
+  if (program >= 80 && program <= 103) return 4;
+  if (program >= 104 && program <= 111) return 5;
+  if (program >= 120) return 6;
+  return 0;
+}
+
+function selectSpessaProgram(channel, program) {
+  const selected = spessaPrograms.get(channel);
+  if (selected === program) return;
+  spessaSynth.controllerChange(channel, MIDI_CC_BANK_MSB, 0);
+  spessaSynth.controllerChange(channel, MIDI_CC_BANK_LSB, 0);
+  spessaSynth.programChange(channel, program);
+  spessaPrograms.set(channel, program);
+}
+
 async function initSpessa(context) {
   if (spessaReady || spessaLoading) return spessaLoading;
   spessaLoading = (async () => {
     try {
-      const [{ WorkletSynthesizer }] = await Promise.all([import('../../node_modules/spessasynth_lib/dist/index.js')]);
-      await context.audioWorklet.addModule(new URL('../../node_modules/spessasynth_lib/dist/spessasynth_processor.min.js', import.meta.url));
+      await context.audioWorklet.addModule(SPESSA_WORKLET_URL);
       spessaSynth = new WorkletSynthesizer(context);
       spessaSynth.connect(context.destination);
-      const response = await fetch('/soundfonts/forminic.sf3');
-      if (!response.ok) throw new Error('soundfont ausente');
+      let response = null;
+      for (const url of SOUNDFONT_URLS) {
+        response = await fetch(url);
+        if (response.ok) break;
+      }
+      if (!response?.ok) throw new Error('soundfont ausente');
       const bank = await response.arrayBuffer();
       await spessaSynth.soundBankManager.addSoundBank(bank, 'forminic');
       await spessaSynth.isReady;
-      spessaSynth.pitchWheelRange?.(0, 2);
+      for (let channel = 0; channel < 16; channel += 1) {
+        try {
+          spessaSynth.controllerChange(channel, MIDI_CC_BANK_MSB, 0);
+          spessaSynth.controllerChange(channel, MIDI_CC_BANK_LSB, 0);
+          spessaSynth.pitchWheelRange?.(channel, 2);
+        } catch (_) {}
+      }
       spessaReady = true;
     } catch (_) {
       spessaReady = false;
@@ -173,27 +208,26 @@ export const toneSpessaEngine = {
 
   play(midi, index, total, scheduledAt, velocity, muted, preset, currentTime) {
     if (!toneReady) return null;
-    const program = PROGRAMS[preset?.id] ?? PROGRAMS[preset?.engine] ?? 0;
+    if (preset?.id?.startsWith('gm') && !spessaReady) return null;
+    const program = Number.isInteger(preset?.program) ? preset.program : PROGRAMS[preset?.id] ?? PROGRAMS[preset?.engine] ?? 0;
     const type = soundType(preset);
     const level = LEVELS[type] || LEVELS.fallback;
     if (spessaReady && spessaSynth && preset?.engine !== GLOBAL_TOKENS.ENGINE_GUITAR) {
       const delay = Math.max(MIN_SCHEDULE_AHEAD, (scheduledAt ?? currentTime) - currentTime);
-      const noteKey = `${0}:${midi}`;
+      const channel = spessaChannelFor(program);
+      const noteKey = `${channel}:${midi}`;
       window.clearTimeout(spessaTimers.get(noteKey));
       window.setTimeout(() => {
-        if (spessaProgram !== program) {
-          spessaSynth.programChange(0, program);
-          spessaProgram = program;
-        }
-        spessaSynth.noteOff(0, midi);
-        spessaSynth.noteOn(0, midi, Math.max(1, Math.min(108, Math.round(velocity * level * 118))));
+        selectSpessaProgram(channel, program);
+        spessaSynth.noteOff(channel, midi);
+        spessaSynth.noteOn(channel, midi, Math.max(1, Math.min(108, Math.round(velocity * level * 118))));
       }, delay * 1000);
       const length = preset.duration === Infinity ? 18 : Math.min(8, preset.duration || 4);
       spessaTimers.set(noteKey, window.setTimeout(() => {
-        spessaSynth?.noteOff?.(0, midi);
+        spessaSynth?.noteOff?.(channel, midi);
         spessaTimers.delete(noteKey);
       }, (delay + length) * 1000));
-      return { tone: true, spessa: true, midi, startedAt: scheduledAt ?? currentTime, bendRatio: 1 };
+      return { tone: true, spessa: true, channel, midi, startedAt: scheduledAt ?? currentTime, bendRatio: 1 };
     }
 
     const startAt = Tone.now() + Math.max(MIN_SCHEDULE_AHEAD, (scheduledAt ?? currentTime) - currentTime);
@@ -241,9 +275,10 @@ export const toneSpessaEngine = {
       return;
     }
     if (voice.spessa) {
-      window.clearTimeout(spessaTimers.get(`0:${voice.midi}`));
-      spessaTimers.delete(`0:${voice.midi}`);
-      spessaSynth?.noteOff?.(0, voice.midi);
+      const noteKey = `${voice.channel ?? 0}:${voice.midi}`;
+      window.clearTimeout(spessaTimers.get(noteKey));
+      spessaTimers.delete(noteKey);
+      spessaSynth?.noteOff?.(voice.channel ?? 0, voice.midi);
       return;
     }
     const time = Tone.now();
@@ -266,7 +301,7 @@ export const toneSpessaEngine = {
     if (!voice?.tone) return;
     if (voice.spessa) {
       const semitones = 12 * Math.log2(ratio);
-      spessaSynth?.pitchWheel?.(0, Math.max(0, Math.min(16383, Math.round(8192 + (semitones / 2) * 8192))));
+      spessaSynth?.pitchWheel?.(voice.channel ?? 0, Math.max(0, Math.min(16383, Math.round(8192 + (semitones / 2) * 8192))));
       return;
     }
     const cents = 1200 * Math.log2(ratio);
@@ -290,13 +325,20 @@ export const toneSpessaEngine = {
   },
 
   panic() {
+    try { sampledPianoPitch && (sampledPianoPitch.pitch = 0); } catch (_) {}
+    for (let channel = 0; channel < 16; channel += 1) {
+      try { spessaSynth?.pitchWheel?.(channel, 8192); } catch (_) {}
+    }
     if (spessaSynth) {
-      for (let note = 0; note < 128; note += 1) {
-        try { spessaSynth.noteOff(0, note); } catch (_) {}
+      for (let channel = 0; channel < 16; channel += 1) {
+        for (let note = 0; note < 128; note += 1) {
+          try { spessaSynth.noteOff(channel, note); } catch (_) {}
+        }
       }
     }
     spessaTimers.forEach(timer => window.clearTimeout(timer));
     spessaTimers.clear();
+    spessaPrograms.clear();
     try { sampledPiano?.releaseAll?.(); } catch (_) {}
   },
 };

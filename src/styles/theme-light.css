@@ -92,7 +92,7 @@ body::before {
 }
 
 .hero::after {
-  content: "I  Â·  II  Â·  III  Â·  IV  Â·  V  Â·  VI  Â·  VII";
+  content: "I  ·  II  ·  III  ·  IV  ·  V  ·  VI  ·  VII";
   position: absolute;
   right: 0;
   top: 46px;
@@ -498,9 +498,9 @@ dialog::backdrop {
   .performance-row { padding: 5px; }
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   LIGHT EDITION â€” marfim, papel e latÃ£o
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─────────────────────────────────────────────────────────
+   LIGHT EDITION — marfim, papel e latão
+   ───────────────────────────────────────────────────────── */
 
 body[data-theme="light"] {
   --paper: #f3efe6;
@@ -758,7 +758,7 @@ body[data-theme="light"] .guide-tip span {
   color: #665d51;
 }
 
-/* Light Lime Edition â€” referÃªncia Ã  primeira versÃ£o do instrumento. */
+/* Light Lime Edition — referência à primeira versão do instrumento. */
 body[data-theme="light"] {
   --paper: #f4f1e9;
   --ink: #171715;
@@ -865,7 +865,7 @@ body[data-theme="light"] .tonic-add:hover {
   color: #171715;
 }
 
-/* Mobile instrument â€” navegaÃ§Ã£o com polegar e performance sempre alcanÃ§Ã¡vel. */
+/* Mobile instrument — navegação com polegar e performance sempre alcançável. */
 @media (max-width: 620px) {
   body {
     padding-bottom: 78px;
@@ -1002,7 +1002,7 @@ body[data-theme="light"] .tonic-add:hover {
   }
 }
 
-/* Tooltip final: mantÃ©m os atalhos fora da composiÃ§Ã£o visual atÃ© a interaÃ§Ã£o. */
+/* Tooltip final: mantém os atalhos fora da composição visual até a interação. */
 .instrument .note-key .keycap,
 .instrument .control-key .keycap,
 .instrument .memory-slot .keycap,
