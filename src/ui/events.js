@@ -110,6 +110,7 @@ export const events = {
 
   handleSmartModeKeyDown(event) {
     if (!store.state.smartMode) return false;
+    if (store.state.workspace === GLOBAL_TOKENS.WORKSPACE_PERFORMANCE) return false;
 
     const notePosition = this.smartNoteKeys[event.code];
     if (notePosition !== undefined) {
@@ -236,6 +237,16 @@ export const events = {
     renderer.updateUI();
   },
 
+  hasActiveNotes() {
+    const pref = UI_EVENTS_TOKENS.ACTION_PREFIXES;
+    for (const a of store.state.activeActions) {
+      if (a.startsWith(pref.SMART_TONIC) || a.startsWith(pref.TONIC) || a.startsWith(pref.DEGREE) || a.startsWith(pref.MEMORY) || a.startsWith(pref.PERFORMANCE)) {
+        return true;
+      }
+    }
+    return false;
+  },
+
   deactivate(action) {
     if (!store.state.activeActions.has(action)) return;
     store.state.activeActions.delete(action);
@@ -248,7 +259,9 @@ export const events = {
       || action.startsWith(pref.MEMORY)
       || action.startsWith(pref.PERFORMANCE)
     ) {
-      audioEngine.dampVoices(store.state.pedalActive ? 1.8 : 0.2);
+      if (!this.hasActiveNotes()) {
+        audioEngine.dampVoices(store.state.pedalActive ? 1.8 : 0.2);
+      }
     } else if (action.startsWith(pref.EFFECT)) {
       audioEngine.applyPerformanceEffect(action, false);
     }

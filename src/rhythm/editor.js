@@ -359,7 +359,7 @@ export function initRhythmEditor() {
       blocks.forEach(block => {
         if (!playedBlocks.has(block.id) && block.startTimeMs <= elapsedMs) {
           playedBlocks.add(block.id);
-          rhythmEngine.playTrack(block.trackId, now, block.velocity / 100, block.durationMs / 1000);
+          rhythmEngine.playTrack(block.trackId, now, block.velocity / 100, block.durationMs);
           
           // Piscar o bloco visualmente
           const blockEls = document.querySelectorAll('.piano-roll-block');
